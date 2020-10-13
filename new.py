@@ -7,7 +7,7 @@ import  sys, os
 from  utils import WriteTxt
 from arxiv import *
 
-CHROME_DRIVER = "/media/hao/DS/OTHER/TOOLS"
+CHROME_DRIVER = "/home/hao/Software"
 sys.path.append("CHROME_DRIVER")
 
 SEARCH = "image+retrieval"

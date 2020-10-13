@@ -114,7 +114,8 @@ def GetXmlContent(driver, url):
         root = "/html/body/div/main/div/div/div/div['content']/div['abs']/"
         title = content.xpath(root + "h1/text()")[0]
         date = content.xpath(root + "div[2]/text()")
-        if [] == date or ',' in str(date[0]).strip():
+        date0 = date[0].strip().strip('\n')
+        if [] == date or '' == date0 or ',' in date0:
             date = content.xpath(root + "div[1]/text()")[0].strip().strip('\n')
         else:
             date = date[0]
