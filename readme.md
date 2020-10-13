@@ -1,6 +1,8 @@
 # 爬虫
 ## 依赖环境
-- python   
+- python3   
+	- selenium   
+	- tqdm   
 - chromdriver    
 把 chromdriver 所在目录配置到环境变量即可；也可以修改脚本中的第一句话 `export PATH=[chromdriver_path]:$PATH`
 
