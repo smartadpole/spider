@@ -105,41 +105,65 @@ def InConference(data):
             return c
     return ""
 
+def GetComments(content, root):
+    comments = content.xpath(root + "div['metatable']/table/tbody/tr[1]/td[2]/text()")
+    if len(comments) != 0:
+        comments = comments[0].strip("\n").strip(" ")
+        if "" == comments:
+            comments = content.xpath(root + "div['metatable']/table/tbody/tr[1]/td[2]/span/text()")[0].strip("\n").strip(" ")
+        year = FindYear(comments)
+        comments = InConference(comments)
+        if "" != comments:
+            comments += " " + year
+    else:
+        comments = ""
+
+    return comments
+
+def GetAbstract(content, root):
+    abstract = content.xpath(root + "blockquote/text()")[0].strip(" ").strip('\n')
+    if '' != abstract:
+        abstract += ' '
+    abstract_other = content.xpath(root + "blockquote/*")
+    for a in abstract_other:
+        if None != a.text and 'Abstract:' != a.text:
+            abstract += a.text.strip()
+        if None != a.tail and 'Abstract:' != a.tail:
+            abstract += a.tail.strip()
+    abstract = abstract.replace("\n", " ")
+
+    return abstract
+
+def GetDate(content, root):
+    date = content.xpath(root + "div[2]/text()")
+    date0 = date[0].strip().strip('\n')
+    if [] == date or '' == date0 or ',' in date0:
+        date = content.xpath(root + "div[1]/text()")[0].strip().strip('\n')
+    else:
+        date = date[0]
+    date = DateFormat(date)
+
+    return date
+
+def GetTitle(content, root):
+    return content.xpath(root + "h1/text()")[0]
+
 def GetXmlContent(driver, url):
+    url = "https://arxiv.org/abs/2010.13611"
     txt = ""
     try:
         driver.get(url)
         # time.sleep(2)
         content = GetContent(driver)
         root = "/html/body/div/main/div/div/div/div['content']/div['abs']/"
-        title = content.xpath(root + "h1/text()")[0]
-        date = content.xpath(root + "div[2]/text()")
-        date0 = date[0].strip().strip('\n')
-        if [] == date or '' == date0 or ',' in date0:
-            date = content.xpath(root + "div[1]/text()")[0].strip().strip('\n')
-        else:
-            date = date[0]
-        date = DateFormat(date)
-        abstract = content.xpath(root + "blockquote/text()")[0].strip(" ").strip('\n')
-        if '' != abstract:
-            abstract += ' '
-        abstract_other = content.xpath(root + "blockquote/*")
-        for a in abstract_other:
-            if None != a.text and 'Abstract:' != a.text:
-                abstract += a.text.strip()
-            if None != a.tail and 'Abstract:' != a.tail:
-                abstract += a.tail.strip()
-        abstract = abstract.replace("\n", " ")
-        tag = content.xpath(root + "div['metatable']/table/tbody/tr[1]/td[2]/text()")[0].strip("\n").strip(" ")
-        if "" == tag:
-            tag = content.xpath(root + "div['metatable']/table/tbody/tr[1]/td[2]/span/text()")[0].strip("\n").strip(" ")
-        year = FindYear(tag)
-        tag = InConference(tag)
-        if "" != tag:
-            tag += " " + year
+
+        title = GetTitle(content, root)
+        date = GetDate(content, root)
+        abstract = GetAbstract(content, root)
+        comments = GetComments(content, root)
 
         txt = "1. [{}]({})  \n".format(title, url.replace("https://arxiv", "http://cn.arxiv"))
-        txt += "{} *{}* [paper]({}) ".format(tag, date, url)
+        txt += "{} *{}* [paper]({}) ".format(comments, date, url)
         try:
             code = content.xpath(root + "blockquote/a/@href")[0].strip(" ").replace("\n", " ")
             txt += "| [code]({})-official    \n".format(code)
