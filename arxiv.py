@@ -149,7 +149,6 @@ def GetTitle(content, root):
     return content.xpath(root + "h1/text()")[0]
 
 def GetXmlContent(driver, url):
-    url = "https://arxiv.org/abs/2010.13611"
     txt = ""
     try:
         driver.get(url)
