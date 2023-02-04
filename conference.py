@@ -54,15 +54,34 @@ def getIJCAIPapers(ctype, year, minnum, maxnum):
     print("all download finished")
 
 
-def get_CVPR_ICCV_Papers(ctype, year, output):
+def get_CVPR_ICCV_Papers_all(ctype, year, output):
+    if get_CVPR_ICCV_Papers(ctype, year, output, '?day=all'):
+        return
+
+    baseurl = 'http://openaccess.thecvf.com/' + ctype + year
+    r = requests.get(baseurl)
+    data = r.text
+    page_list = re.findall(r"(?<=)\?.+(?=\">Day)|(?<=href=\').+(?=\">Day)", data)
+
+    print("download from: ", page_list)
+    for page in page_list:
+        get_CVPR_ICCV_Papers(ctype, year, output, page)
+
+def get_CVPR_ICCV_Papers(ctype, year, output, page):
     # get web context
-    baseurl = 'http://openaccess.thecvf.com/' + ctype + year + '?day=all'
+    baseurl = 'http://openaccess.thecvf.com/' + ctype + year + page
     r = requests.get(baseurl)
     data = r.text
     # find all pdf links
     link_list = re.findall(r"(?<=href=\").+?pdf(?=\">pdf)|(?<=href=\').+?pdf(?=\">pdf)", data)
-    name_list = re.findall(r"(?<=href=\").+?'+year+'_paper.html\">.+?</a>", data)
-    cnt = 98
+
+    # todo : what
+    # name_list = re.findall(r"(?<=href=\").+?'+year+'_paper.html\">.+?</a>", data)
+
+    if len(link_list) == 0:
+        return False
+
+    cnt = 0
     num = len(link_list)
     # your local path to download pdf files
     localDir = os.path.join(output, ctype, year)
@@ -94,6 +113,8 @@ def get_CVPR_ICCV_Papers(ctype, year, output):
         cnt = cnt + 1
     print("all download finished")
 
+    return True
+
 
 if __name__ == '__main__':
     args = GetArgs()
@@ -103,7 +124,7 @@ if __name__ == '__main__':
     # 注意这里由于ICCV,CVPR下载很快，所以没有加入多线程机制，如果有需要可以参考IJCAI的下载方法
 
     if ctype.lower() == 'cvpr' or ctype.lower() == 'iccv':
-        get_CVPR_ICCV_Papers(ctype,year, args.output)
+        get_CVPR_ICCV_Papers_all(ctype,year, args.output)
     else:
         threads = []
         t1 = threading.Thread(target=getIJCAIPapers, args=(1, 400,))
