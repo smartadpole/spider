@@ -13,6 +13,12 @@
 爬取 arXiv 每日更新论文，导出成特定排版的 markdown 文本；    
 >./new.sh 
  
+## 下载顶会论文
+### ICML
+```shell
+python ICML.py --type ICML --output $dir
+```
+
 
 ## issue
 >Message: session not created: This version of ChromeDriver only supports Chrome version 78     
