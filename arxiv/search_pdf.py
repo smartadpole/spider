@@ -15,7 +15,7 @@ SEARCH = "image+retrieval"
 ONLY_NEW = True
 
 NUM_FILE = "paper_number.csv"
-ITEMS_NUM = 50
+ITEMS_NUM = 200
 SERCH_TYPE = 'title' # all
 
 def GetArgs():
@@ -41,6 +41,7 @@ def GetPDFUrl(content):
 def GetPages(baseurl, content):
     content_root = "/html/body/main/div[1]/div/h1/text()"
     num = content.xpath(content_root)[0]
+    num = num.replace(',', '')
     num = re.findall(r"\d+\.?\d*", num)
     num = [int(n) for n in num]
     total_pages = int((num[2]+num[1]-1) / num[1])
@@ -64,7 +65,7 @@ def GetArticalUrl(driver, page_urls):
 
 
 def ParseArXiv(driver, key):
-    baseurl = "https://arxiv.org/search/cs?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+    baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
     driver.get(baseurl)
     time.sleep(1)
 
