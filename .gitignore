@@ -2,3 +2,6 @@ file/
 __pycache__
 .idea/
 paper/
+*2023*
+paper*
+*pdf

@@ -19,6 +19,12 @@ python arxiv/search_pdf.py --query low+light --output_dir $output
 
 ``` 
  
+## 下载顶会论文
+### ICML
+```shell
+python ICML.py --type ICML --output $dir
+```
+
 
 ## issue
 >Message: session not created: This version of ChromeDriver only supports Chrome version 78     
