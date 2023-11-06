@@ -12,6 +12,12 @@
 ## arXiv 网站每日更新论文爬取
 爬取 arXiv 每日更新论文，导出成特定排版的 markdown 文本；    
 >./new.sh 
+> 
+## arxiv 关键字 pdf 爬取
+```angular2html
+python arxiv/search_pdf.py --query low+light --output_dir $output
+
+``` 
  
 
 ## issue
@@ -22,3 +28,6 @@ ChromeDriver与本地chrome浏览器的版本不一致导致
 ChromeDriver 下载地址 <http://npm.taobao.org/mirrors/chromedriver/>    
  
 
+
+# TODO
+- [ ] search_pdf.py 中舍弃 webdriver 的用法，用 requests 代替（顶会代码中有）；  
