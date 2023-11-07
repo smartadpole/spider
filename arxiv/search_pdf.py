@@ -7,6 +7,7 @@ import  sys, os
 import urllib
 from arxiv import *
 import re
+from util.file import WriteTxt, MkdirSimple
 
 CHROME_DRIVER = "/home/hao/Software"
 sys.path.append("CHROME_DRIVER")
@@ -26,17 +27,28 @@ def GetArgs():
     return parse.parse_args()
 
 def GetPDFUrl(content):
-    content_root = "/html/body/main/div['content']/ol"
-    re_url = content_root + "/li/div/p/span/a[1]/@href"
+    re_root = "/html/body/main/div['content']/ol"
+    re_item = re_root + "/li"
+    content_item = content.xpath(re_item)
 
-    content_urls = content.xpath(re_url)
+    re_url = "div/p/span/a[1]/@href"
+    re_label = "div/div/span[1]/text()"
+    re_title = "p[1]/text()"
+    items = []
 
-    # re_label = content_root + "/li/p[1]"
-    # content_label = content.xpath(re_label)
-    # names = [name.strip() for name in content_label if name.strip() != ""]
-    urls = [i for i in content_urls]
+    for c in content_item:
+        url = c.xpath(re_url)
+        label = c.xpath(re_label)
+        label = "cs.CV" if "cs.CV" in label else label[0]
+        title = c.xpath(re_title)
+        title = "".join(title)
+        title = re.sub('[^a-zA-Z0-9#$%&()]', " ", title)
+        title = " ".join(title.split())
+        if len(url) == 0:
+            continue
+        items.append({"url": url[0], "label": label, "title": title})
 
-    return urls
+    return items
 
 def GetPages(baseurl, content):
     content_root = "/html/body/main/div[1]/div/h1/text()"
@@ -75,28 +87,44 @@ def ParseArXiv(driver, key):
 
     return urls
 
-def Download(urls, output:str):
+def Download(items, output:str):
     os.makedirs(output, exist_ok=True)
 
-    for url in tqdm(urls):
+    for item in tqdm(items):
         try:
+            url = item['url']
             name = os.path.basename(url)
-            file_path = os.path.join(output, name + ".pdf")
+            label = item['label']
+            file_path = os.path.join(output, label, name + ".pdf")
+            MkdirSimple(file_path)
             urllib.request.urlretrieve(url, file_path)
         except:
-            print("error download {}.".format(url))
+            print("error download {}.".format(item))
+
+def SaveCSV(items, file):
+    text = []
+    for item in items:
+        txt = ','.join(item.values())
+        text.append(txt)
+    text = "\n".join(text)
+    WriteTxt(text, file, 'w')
+
 
 def main():
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     args = GetArgs()
     sev = webdriver.chrome.service.Service()
     sev.path = os.path.join(CHROME_DRIVER, "chromedriver")
     driver = webdriver.Chrome(service=sev)
 
-    urls = ParseArXiv(driver, args.query)
-    print("num: ", len(urls))
+    items = ParseArXiv(driver, args.query)
+    print("num: ", len(items))
     driver.close()
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
-    Download(urls, args.output_dir)
+    SaveCSV(items, os.path.join(args.output_dir, "readme.csv"))
+    Download(items, args.output_dir)
+    print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
 if __name__ == "__main__":
