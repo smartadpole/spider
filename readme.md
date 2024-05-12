@@ -14,8 +14,13 @@
 >./new.sh 
 > 
 ## arxiv 关键字 pdf 爬取
-```angular2html
+```shell
+# use chromdriver
 python arxiv/search_pdf.py --query low+light --output_dir $output
+# use request, slowly, accuracy
+python arxiv/search_pdf_no_driver.py --query low+light --output_dir $output
+# use request, string, fast
+python arxiv/search_pdf_string.py --query low+light --output_dir $output
 
 ``` 
  
