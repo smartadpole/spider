@@ -45,15 +45,16 @@ def GetPDFUrl(content):
     li_matches = re.finditer(r'<li class="arxiv-result">.*?</li>', content, re.DOTALL)
     for li_match in li_matches:
         li_content = li_match.group()
-        label_match = re.search(r'Recognition">([^>]+)<', li_content)
+        label = re.findall(r'">([^<]+)</span>', li_content)
         pdf_match = re.search(r'<a href="([^"]+)">pdf</a>', li_content)
-        title_match = pattern = re.search(r'<p class="title is-5 mathjax">\s*(.*?)\s*</p>', li_content, re.DOTALL)
-        if label_match and pdf_match:
-            label = label_match.group(1)
+        title_match = re.search(r'<p class="title is-5 mathjax">\s*(.*?)\s*</p>', li_content, re.DOTALL)
+        if len(label) > 0 and pdf_match and title_match:
+            label = "cs.CV" if "cs.CV" in label else label[0]
             pdf_url = pdf_match.group(1)
             title = title_match.group(1)
             title = remove_tags(title)
             items.append({"url": pdf_url, "label": label, "title": title})
+            print(items[-1])
 
     return items
 
