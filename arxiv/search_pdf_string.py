@@ -54,7 +54,6 @@ def GetPDFUrl(content):
             title = title_match.group(1)
             title = remove_tags(title)
             items.append({"url": pdf_url, "label": label, "title": title})
-            print(items[-1])
 
     return items
 
@@ -71,8 +70,6 @@ def GetPages(baseurl, content):
         if total_pages > 1:
             items = list(range(0, total_pages))
             urls = ["{}&start={}".format(baseurl, str(ITEMS_NUM * i)) for i in items]
-
-
 
     print("pages: ", "\n".join(urls))
 
