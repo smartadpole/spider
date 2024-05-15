@@ -7,6 +7,11 @@
 @time: 2024/5/12 上午11:42
 @desc: 
 '''
+import sys, os
+
+CURRENT_DIR = os.path.dirname(__file__)
+sys.path.append(os.path.join(CURRENT_DIR, '../'))
+
 import math
 
 import requests
@@ -61,10 +66,10 @@ def GetPDFUrl(content):
 def GetPages(baseurl, content):
     urls = [baseurl, ]
 
-    total_num = re.search(r"of (\d+)", content)
+    total_num = re.search(r'of (\d{1,3}(,\d{3})*(\.\d+)?)', content)
 
     if total_num:
-        total_num = int(total_num.group(1))
+        total_num = int(total_num.group(1).replace(',', ''))
         total_pages = math.ceil(total_num / ITEMS_NUM)
 
         if total_pages > 1:

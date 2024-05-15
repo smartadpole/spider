@@ -123,7 +123,7 @@ if __name__ == '__main__':
     year = args.year  # 论文发表的年份
     # 注意这里由于ICCV,CVPR下载很快，所以没有加入多线程机制，如果有需要可以参考IJCAI的下载方法
 
-    if ctype.lower() == 'cvpr' or ctype.lower() == 'iccv':
+    if ctype.lower() in ['cvpr', 'iccv', 'wacv']:
         get_CVPR_ICCV_Papers_all(ctype,year, args.output)
     else:
         threads = []
