@@ -29,7 +29,7 @@ ONLY_NEW = True
 NUM_FILE = "paper_number.csv"
 ITEMS_NUM = 200
 SERCH_TYPE = 'title'  # all
-
+COMMENTS = ['cvpr', 'iccv', 'iclr']
 
 def GetArgs():
     parse = argparse.ArgumentParser()
@@ -95,8 +95,10 @@ def GetArticalUrl(page_urls):
 
 
 def ParseArXiv(key):
-    baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(
-        key, SERCH_TYPE, ITEMS_NUM)
+    if key.split()[0].lower() in COMMENTS:
+        baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, "comments", ITEMS_NUM)
+    else:
+        baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
     response = requests.get(baseurl)
     if response.status_code == 200:
         content = response.text
