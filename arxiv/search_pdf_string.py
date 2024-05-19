@@ -112,13 +112,16 @@ def ParseArXiv(key):
     return []
 
 
-def Download(items, output: str):
+def Download(items, output: str, usetitle=False):
     os.makedirs(output, exist_ok=True)
 
     for item in tqdm(items):
         try:
             url = item['url']
-            name = os.path.basename(url)
+            if usetitle:
+                name = item['title']
+            else:
+                name = os.path.basename(url)
             label = item['label']
             file_path = os.path.join(output, label, name + ".pdf")
             MkdirSimple(file_path)

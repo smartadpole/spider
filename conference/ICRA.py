@@ -65,7 +65,7 @@ def GetArticalUrl(page_urls, output_dir):
             dir_name = os.path.join(output_dir, year)
             print("writing in {}, total papers: {}".format(dir_name, len(pdf_links)))
             SaveCSV(pdf_links, os.path.join(dir_name, "readme.csv"))
-            Download(pdf_links, dir_name)
+            Download(pdf_links, dir_name, True)
             print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
