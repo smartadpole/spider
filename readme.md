@@ -30,6 +30,14 @@ python arxiv/search_pdf_string.py --query low+light --output_dir $output
 python ICML.py --type ICML --output $dir
 ```
 
+### ICRA/IAARC
+```shell
+# download all years
+python conference/ICRA.py --output $output
+# download the year, like 2023
+python conference/ICRA.py --output $output --url "https://www.iaarc.org/publications/search.php?series=1&query=&publication=45" 
+```
+
 ### arxiv 中的顶会
 ```commandline
 python arxiv/search_pdf_string.py --query CVPR 2024 --output_dir $output

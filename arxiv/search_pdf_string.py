@@ -13,15 +13,14 @@ CURRENT_DIR = os.path.dirname(__file__)
 sys.path.append(os.path.join(CURRENT_DIR, '../'))
 
 import math
-
 import requests
 import time
+from tqdm import tqdm
 import argparse
 import sys
 import os
 import urllib
 import re
-from tqdm import tqdm
 from util.file import WriteTxt, MkdirSimple
 
 ONLY_NEW = True
@@ -38,7 +37,7 @@ def GetArgs():
 
     return parse.parse_args()
 
-def remove_tags(text):
+def RemoveTags(text):
     # 匹配尖括号内的内容
     pattern = r'<.*?>'
     # 使用 sub 函数替换匹配到的内容为空字符串
@@ -57,7 +56,7 @@ def GetPDFUrl(content):
             label = "cs.CV" if "cs.CV" in label else label[0]
             pdf_url = pdf_match.group(1)
             title = title_match.group(1)
-            title = remove_tags(title)
+            title = RemoveTags(title)
             items.append({"url": pdf_url, "label": label, "title": title})
 
     return items
@@ -83,7 +82,10 @@ def GetPages(baseurl, content):
 
 def GetArticalUrl(page_urls):
     urls = []
-    for url in page_urls:
+
+    base_urls = page_urls if isinstance(page_urls, list) else [page_urls, ]
+
+    for url in base_urls:
         response = requests.get(url)
         if response.status_code == 200:
             content = response.text
