@@ -34,21 +34,17 @@ def GetPDFUrl(content):
     year = year_match.group(1) if year_match else "0000"
 
     patch_matches = re.finditer(r'<div class="article compact">.*?(?=<div class="article compact">|</div></div>)', content, re.DOTALL)
-    i = 0
     for pm in patch_matches:
-        i += 1
-        if i == 56:
-            i = 56
         patch = pm.group()
-        # label = re.findall(r'">([^<]+)</span>', patch)
+        doi_match = re.search(r'<a href="https://doi[^>]+>(.*)</a>', patch)
         pdf_match = re.search(r'<a href="([^"]+)">Download fulltext</a>', patch)
         title_match = re.search(r'<a href="[^"]+">([^<]+)</a>', patch, re.DOTALL)
-        if pdf_match and title_match:
-            # label = "cs.CV" if "cs.CV" in label else label[0]
+        if pdf_match and title_match and doi_match:
+            doi = doi_match.group(1)
             pdf_url = pdf_match.group(1)
             pdf_url = pdf_url.replace(' ', '%20') # fix for space
             title = RemoveTags(title_match.group(1))
-            items.append({"url": "https://www.iaarc.org/publications/" + pdf_url, "label": "pdf", "title": title})
+            items.append({"url": "https://www.iaarc.org/publications/" + pdf_url, "doi": doi, "label": "pdf", "title": title})
 
     return year, items
 

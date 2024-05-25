@@ -22,6 +22,8 @@ import os
 import urllib
 import re
 from util.file import WriteTxt, MkdirSimple
+import csv
+import io
 
 ONLY_NEW = True
 
@@ -129,13 +131,15 @@ def Download(items, output: str, usetitle=False):
         except:
             print("error download {}.".format(item))
 
-
 def SaveCSV(items, file):
-    text = []
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+
     for item in items:
-        txt = ','.join(item.values())
-        text.append(txt)
-    text = "\n".join(text)
+        cleaned_values = [value.strip().replace('\n', ' ').replace('\r', ' ') for value in item.values()]
+        writer.writerow(cleaned_values)
+
+    text = output.getvalue().strip()
     WriteTxt(text, file, 'w')
 
 
