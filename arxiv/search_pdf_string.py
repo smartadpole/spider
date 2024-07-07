@@ -46,7 +46,6 @@ def RemoveTags(text):
     return re.sub(pattern, '', text)
 
 def GetPDFUrl(content):
-    print("loading papers info...")
     items = []
     li_matches = re.finditer(r'<li class="arxiv-result">.*?</li>', content, re.DOTALL)
     for li_match in li_matches:
@@ -77,8 +76,6 @@ def GetPages(baseurl, content):
             items = list(range(0, total_pages))
             urls = ["{}&start={}".format(baseurl, str(ITEMS_NUM * i)) for i in items]
 
-    print("pages: ", "\n".join(urls))
-
     return urls
 
 
@@ -91,6 +88,7 @@ def GetArticalUrl(page_urls):
         response = requests.get(url)
         if response.status_code == 200:
             content = response.text
+            print("loading papers info from {}".format(url))
             pdf_links = GetPDFUrl(content)
             urls.extend(pdf_links)
         time.sleep(1)
@@ -102,7 +100,10 @@ def ParseArXiv(key):
     if key.split()[0].lower() in COMMENTS:
         baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, "comments", ITEMS_NUM)
     else:
-        baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+        if '+' in key:
+            baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+        else:
+            baseurl = "https://arxiv.org/search/?query=\"{}\"&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
     response = requests.get(baseurl)
     if response.status_code == 200:
         content = response.text
@@ -110,6 +111,11 @@ def ParseArXiv(key):
         urls = GetArticalUrl(page_urls)
 
         return urls
+    else:
+        print("Response URL:", response.url)
+        print("Response Status Code:", response.status_code)
+        print("Response Reason:", response.reason)
+        print("Response Elapsed Time:", response.elapsed)
 
     return []
 
