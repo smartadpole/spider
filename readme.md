@@ -43,6 +43,13 @@ python conference/ICRA.py --output $output --url "https://www.iaarc.org/publicat
 python arxiv/search_pdf_string.py --query CVPR 2024 --output_dir $output
 ```
 
+### ICCA
+```shell
+# 下载全部年份的论文
+python ISCA.py --year all --output $dir
+# 下载特定年份的论文
+python ISCA.py --year 2023 --output $dir
+```
 
 ## issue
 >Message: session not created: This version of ChromeDriver only supports Chrome version 78     
