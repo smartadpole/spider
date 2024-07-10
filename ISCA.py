@@ -58,7 +58,7 @@ def down_paper(link_list, output):
             err_cnt += 1
             if err_cnt < 3:
                 continue
-            print(err, " ", url)
+            print("{}, {}, {}".format(err, file_name, url))
         cnt = cnt + 1
         progress_bar.update(1)
 
@@ -66,6 +66,9 @@ def down_paper(link_list, output):
 
     return True
 
+
+def SanitizeFilename(filename):
+    return filename.replace('/', '_').replace('\\', '_')
 
 def GetPaper(baseurl, output, y):
     # get web context
@@ -81,6 +84,7 @@ def GetPaper(baseurl, output, y):
         for a in div.find_all("a", class_="w3-text"):
             paper_url = prefix + '/' + a['href'].replace('html', 'pdf')
             paper_title = a.find("p").text.strip().split("\n")[0]
+            paper_title = SanitizeFilename(paper_title)
             link_list.append((category, paper_url,  "{}_{}.pdf".format(paper_title, y)))
 
     if not link_list:
@@ -107,6 +111,8 @@ def main():
         years_link = {arg.year: years_link[arg.year]}
 
     for year, url in years_link.items():
+        if 2016 < int(year):
+            continue
         GetPaper(url, output, year)
 
 
