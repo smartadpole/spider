@@ -19,6 +19,7 @@ import argparse
 def GetArgs():
     parser = argparse.ArgumentParser(description="",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--key", type=str, help="google api key")
     parser.add_argument("--query", type=str, help="")
     parser.add_argument("--output", type=str, default="videos", help="")
 
@@ -26,8 +27,7 @@ def GetArgs():
     return args
 
 
-def search_videos(query, max_results):
-    api_key = 'AIzaSyC_5SNtHotngm8F1vkV4SmKZpUcScQAEMs'
+def search_videos(api_key, query, max_results):
     youtube = build('youtube', 'v3', developerKey=api_key)
 
     request = youtube.search().list(
@@ -57,7 +57,7 @@ def main():
     os.makedirs(output, exist_ok=True)
 
     max_results = 100
-    videos = search_videos(query, max_results)
+    videos = search_videos(args.key, query, max_results)
     for video in videos:
         video_id = video['video_id']
         video_url = f'https://www.youtube.com/watch?v={video_id}'

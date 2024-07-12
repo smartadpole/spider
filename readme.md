@@ -51,6 +51,18 @@ python ISCA.py --year all --output $dir
 python ISCA.py --year 2023 --output $dir
 ```
 
+## 下载数据
+### 下载 yotube 视频
+环境配置
+```commandline
+pip install yt-dlp
+pip install google-api-python-client
+```
+下载视频
+```commandline
+python dataset/youtube.py --key "key" --query "jump rope" --output "output"
+```
+
 ## issue
 >Message: session not created: This version of ChromeDriver only supports Chrome version 78     
 
