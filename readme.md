@@ -23,6 +23,11 @@ python arxiv/search_pdf_no_driver.py --query low+light --output_dir $output
 python arxiv/search_pdf_string.py --query low+light --output_dir $output
 
 ``` 
+
+## arxiv 关联论文下载
+```commandline
+python arxiv/citations.py --url https://arxiv.org/abs/2211.03375 --driver $chromedriver --type all --output $output
+```
  
 ## 下载顶会论文
 ### ICML

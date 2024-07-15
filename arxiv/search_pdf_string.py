@@ -138,6 +138,7 @@ def Download(items, output: str, usetitle=False):
             print("error download {}.".format(item))
 
 def SaveCSV(items, file):
+    MkdirSimple(file)
     output = io.StringIO()
     writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
 
