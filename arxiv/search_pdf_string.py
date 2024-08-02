@@ -24,6 +24,7 @@ import re
 from util.file import WriteTxt, MkdirSimple
 import csv
 import io
+import datetime
 
 ONLY_NEW = True
 
@@ -31,11 +32,13 @@ NUM_FILE = "paper_number.csv"
 ITEMS_NUM = 200
 SERCH_TYPE = 'title'  # all
 COMMENTS = ['cvpr', 'iccv', 'iclr']
+INVALID = False
 
 def GetArgs():
     parse = argparse.ArgumentParser()
     parse.add_argument("--query", type=str)
     parse.add_argument("--output_dir", type=str, default="./file")
+    parse.add_argument("--min_id", type=str, help="Minimum ID to download", default="")
 
     return parse.parse_args()
 
@@ -45,8 +48,13 @@ def RemoveTags(text):
     # 使用 sub 函数替换匹配到的内容为空字符串
     return re.sub(pattern, '', text)
 
-def GetPDFUrl(content):
+def GetPDFUrl(content, min_id):
+    global INVALID
     items = []
+
+    if INVALID:
+        return items
+
     li_matches = re.finditer(r'<li class="arxiv-result">.*?</li>', content, re.DOTALL)
     for li_match in li_matches:
         li_content = li_match.group()
@@ -58,6 +66,13 @@ def GetPDFUrl(content):
             pdf_url = pdf_match.group(1)
             title = title_match.group(1)
             title = RemoveTags(title)
+
+            if "" != min_id:
+                pdf_id = pdf_url.split('/')[-1]
+                if pdf_id == min_id:
+                    INVALID = True
+                    return items
+
             items.append({"url": pdf_url, "label": label, "title": title})
 
     return items
@@ -78,25 +93,27 @@ def GetPages(baseurl, content):
 
     return urls
 
-
-def GetArticalUrl(page_urls):
+def GetArticalUrl(page_urls, min_id):
+    global INVALID
     urls = []
 
     base_urls = page_urls if isinstance(page_urls, list) else [page_urls, ]
 
     for url in base_urls:
+        if INVALID:
+            return urls
         response = requests.get(url)
         if response.status_code == 200:
             content = response.text
             print("loading papers info from {}".format(url))
-            pdf_links = GetPDFUrl(content)
+            pdf_links = GetPDFUrl(content, min_id)
             urls.extend(pdf_links)
         time.sleep(1)
 
     return urls
 
 
-def ParseArXiv(key):
+def ParseArXiv(key, min_id):
     if key.split()[0].lower() in COMMENTS:
         baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, "comments", ITEMS_NUM)
     else:
@@ -108,7 +125,7 @@ def ParseArXiv(key):
     if response.status_code == 200:
         content = response.text
         page_urls = GetPages(baseurl, content)
-        urls = GetArticalUrl(page_urls)
+        urls = GetArticalUrl(page_urls, min_id)
 
         return urls
     else:
@@ -153,11 +170,16 @@ def SaveCSV(items, file):
 def main():
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     args = GetArgs()
+    output_file = os.path.join(args.output_dir, "readme.csv")
 
-    items = ParseArXiv(args.query)
+    if args.min_id != "":
+        date = datetime.date.today().strftime("%Y-%m-%d")
+        output_file = os.path.join(args.output_dir, "readme_{}.csv".format(date))
+
+    items = ParseArXiv(args.query, args.min_id)
     print("total papers: ", len(items))
 
-    SaveCSV(items, os.path.join(args.output_dir, "readme.csv"))
+    SaveCSV(items, output_file)
     Download(items, args.output_dir)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
