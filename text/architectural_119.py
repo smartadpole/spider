@@ -189,43 +189,65 @@ def save_image(image_url, save_path):
     except requests.exceptions.SSLError as e:
         print(f"SSL Error: {e}")
 
+def extract_first_valid_text(soup):
+    """Extract the first valid non-empty text from the HTML soup."""
+    for element in soup.stripped_strings:
+        return element  # 返回第一个有效字符串
+    return "Untitled"  # 如果没有有效字符串，使用默认标题
+
 def convert_html_to_markdown(soup, page_url, output_dir):
-    """Convert HTML content to Markdown format."""
+    """Convert HTML content to Markdown format, preserving original whitespace and indentation."""
     markdown_content = []
 
-    for element in soup.descendants:
+    # 提取目标 div 中的内容
+    target_div = soup.find('div', class_='b_con')
+    if not target_div:
+        target_div = soup
+
+    # 提前提取标题
+    title = extract_first_valid_text(target_div)
+
+    def process_element(element):
+        """Recursive function to process HTML elements into Markdown, preserving whitespace."""
         if isinstance(element, str):
-            markdown_content.append(element.strip())
-        elif element.name == 'p':
-            markdown_content.append(f"\n\n{element.get_text().strip()}\n")
-        elif element.name == 'h1':
-            markdown_content.append(f"# {element.get_text().strip()}\n")
-        elif element.name == 'h2':
-            markdown_content.append(f"## {element.get_text().strip()}\n")
-        elif element.name == 'h3':
-            markdown_content.append(f"### {element.get_text().strip()}\n")
-        elif element.name == 'h4':
-            markdown_content.append(f"#### {element.get_text().strip()}\n")
-        elif element.name == 'h5':
-            markdown_content.append(f"##### {element.get_text().strip()}\n")
-        elif element.name == 'h6':
-            markdown_content.append(f"###### {element.get_text().strip()}\n")
+            content = element
+        elif element.name in ['p', 'div', 'span']:
+            content = ''.join(process_element(e) for e in element.contents)
+        elif element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:  # 确保处理的只是合法的标题标签
+            level = element.name[1]  # h1 -> 1, h2 -> 2, etc.
+            content = f"{'#' * int(level)} {element.get_text().strip()}\n"
         elif element.name == 'img':
             img_url = element.get('src')
             if img_url:
                 full_img_url = urljoin(page_url, img_url)
                 img_name = os.path.basename(urlparse(full_img_url).path)
                 img_save_path = os.path.join(output_dir, img_name)
-                MkdirSimple(img_save_path)
+                MkdirSimple(output_dir)
                 save_image(full_img_url, img_save_path)
-                markdown_content.append(f"![{element.get('alt', '')}]({img_name})")
+                content = f"![{element.get('alt', '')}]({img_name})"
+            else:
+                content = ''
         elif element.name == 'a':
-            link_text = element.get_text().strip()
+            link_text = ''.join(process_element(e) for e in element.contents)
             link_url = urljoin(page_url, element.get('href'))
-            markdown_content.append(f"[{link_text}]({link_url})")
+            content = f"[{link_text}]({link_url})"
+        elif element.name == 'li':
+            content = f"* {''.join(process_element(e) for e in element.contents)}\n"
+        elif element.name == 'ul':
+            content = '\n'.join(f"* {process_element(li)}" for li in element.find_all('li')) + '\n'
+        elif element.name == 'ol':
+            content = '\n'.join(f"{i+1}. {process_element(li)}" for i, li in enumerate(element.find_all('li'))) + '\n'
+        else:
+            content = ''.join(process_element(e) for e in element.contents)
 
-    return ''.join(markdown_content)
+        return content
 
+    for element in target_div.children:
+        content = process_element(element)
+        if content.strip():  # 仅在内容非空时追加，去掉独立的空行
+            markdown_content.append(content + "  ")
+
+    return title, ''.join(markdown_content)
 
 def GetArticlesUrl(soup):
     items = []
@@ -247,6 +269,16 @@ def GetArticlesUrl(soup):
 
     return items
 
+def generate_markdown_header(subtitle):
+    """Generate a markdown header based on the number of dots in the subtitle."""
+
+    dot_count = subtitle.count('.')
+    header_level = '#' * (dot_count + 1)
+
+    # 生成最终的 Markdown 标题
+    return f"{header_level} {subtitle}"
+
+
 def parse_page(url, output_dir, depth=0):
     output_dir = os.path.join(output_dir, 'depth_{}'.format(depth))
     """Parse the page and extract the nested content."""
@@ -256,7 +288,8 @@ def parse_page(url, output_dir, depth=0):
     if not main_content:
         print("error get main content.")
         return
-    markdown_content = convert_html_to_markdown(main_content, url, output_dir)
+
+    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir)
 
     has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
@@ -264,7 +297,7 @@ def parse_page(url, output_dir, depth=0):
             return has_toc, markdown_content
 
     # Save the Markdown content
-    markdown_filename = os.path.join(output_dir, f"page_{depth}_main.md")
+    markdown_filename = os.path.join(output_dir, f"PAGE{depth}_{title}_TOC.md")
     MkdirSimple(markdown_filename)
     save_markdown(markdown_content, markdown_filename)
 
@@ -272,16 +305,18 @@ def parse_page(url, output_dir, depth=0):
     links = main_content.find_all('li')
     links = [li.find('a') for li in links if li.find('a')]
     page_content = []
-    for link in tqdm(links):
+    for link in tqdm(links, mininterval=1.0):
         href = link.get('href')
+        subtitle = link.text
         if href:
             full_url = urljoin(url, href)
             subpage, content = parse_page(full_url, output_dir, depth + 1)
             if subpage:
+                page_content.append(generate_markdown_header(subtitle))
                 page_content.append(content)
 
     if len(page_content) > 0:
-        markdown_filename = os.path.join(output_dir, f"page{depth}_content.md")
+        markdown_filename = os.path.join(output_dir, f"PAGE{depth}_{title}.md")
         MkdirSimple(markdown_filename)
         save_markdown('\n'.join(page_content), markdown_filename)
 
