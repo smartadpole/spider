@@ -36,6 +36,7 @@ ITEMS_NUM = 200
 SERCH_TYPE = 'title'  # all
 COMMENTS = ['cvpr', 'iccv', 'iclr']
 INVALID = False
+PAGE_COUNT = 0
 
 def GetArgs():
     parse = argparse.ArgumentParser()
@@ -187,7 +188,10 @@ def save_image(image_url, save_path):
         with open(save_path, 'wb') as f:
             f.write(response.content)
     except requests.exceptions.SSLError as e:
-        print(f"SSL Error: {e}")
+        print(f"SSL: Error downloading {image_url}: {e} path: {save_path}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error downloading {image_url}: {e} path: {save_path}")
+
 
 def extract_first_valid_text(soup):
     """Extract the first valid non-empty text from the HTML soup."""
@@ -280,6 +284,7 @@ def generate_markdown_header(subtitle):
 
 
 def parse_page(url, output_dir, depth=0):
+    global PAGE_COUNT
     output_dir = os.path.join(output_dir, 'depth_{}'.format(depth))
     """Parse the page and extract the nested content."""
     content = get_page_content(url)
@@ -290,14 +295,18 @@ def parse_page(url, output_dir, depth=0):
         return
 
     title, markdown_content = convert_html_to_markdown(main_content, url, output_dir)
+    title = title.replace('/', '_')
 
     has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
         if has_toc[0].text.replace(' ', '') == "目录":
             return has_toc, markdown_content
+    else:
+        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
+        PAGE_COUNT += 1
 
-    # Save the Markdown content
-    markdown_filename = os.path.join(output_dir, f"PAGE{depth}_{title}_TOC.md")
+# Save the Markdown content
+    markdown_filename = os.path.join(output_dir, f"{title}_TOC.md")
     MkdirSimple(markdown_filename)
     save_markdown(markdown_content, markdown_filename)
 
@@ -305,7 +314,7 @@ def parse_page(url, output_dir, depth=0):
     links = main_content.find_all('li')
     links = [li.find('a') for li in links if li.find('a')]
     page_content = []
-    for link in tqdm(links, mininterval=1.0):
+    for link in links:
         href = link.get('href')
         subtitle = link.text
         if href:
@@ -316,13 +325,16 @@ def parse_page(url, output_dir, depth=0):
                 page_content.append(content)
 
     if len(page_content) > 0:
-        markdown_filename = os.path.join(output_dir, f"PAGE{depth}_{title}.md")
+        markdown_filename = os.path.join(output_dir, f"{title}.md")
         MkdirSimple(markdown_filename)
         save_markdown('\n'.join(page_content), markdown_filename)
 
     return False, markdown_content
 
 def main():
+    # 禁用 InsecureRequestWarning 警告
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     args = GetArgs()
     output_file = os.path.join(args.output_dir, "readme.csv")
