@@ -226,7 +226,7 @@ def convert_html_to_markdown(soup, page_url, output_dir):
                 full_img_url = urljoin(page_url, img_url)
                 img_name = os.path.basename(urlparse(full_img_url).path)
                 img_save_path = os.path.join(output_dir, img_name)
-                MkdirSimple(output_dir)
+                MkdirSimple(img_save_path)
                 save_image(full_img_url, img_save_path)
                 content = f"![{element.get('alt', '')}]({img_name})"
             else:
@@ -283,9 +283,8 @@ def generate_markdown_header(subtitle):
     return f"{header_level} {subtitle}"
 
 
-def parse_page(url, output_dir, depth=0):
+def parse_page(url, output_dir, output_dir_image):
     global PAGE_COUNT
-    output_dir = os.path.join(output_dir, 'depth_{}'.format(depth))
     """Parse the page and extract the nested content."""
     content = get_page_content(url)
     soup = BeautifulSoup(content, 'html.parser')
@@ -294,7 +293,7 @@ def parse_page(url, output_dir, depth=0):
         print("error get main content.")
         return
 
-    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir)
+    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir_image)
     title = title.replace('/', '_')
 
     has_toc = soup.find_all('a', class_='round_button')
@@ -315,11 +314,13 @@ def parse_page(url, output_dir, depth=0):
     links = [li.find('a') for li in links if li.find('a')]
     page_content = []
     for link in links:
+        sub_output_dir = os.path.join(output_dir, title)
+        sub_output_dir_image = os.path.join(output_dir_image, title)
         href = link.get('href')
         subtitle = link.text
         if href:
             full_url = urljoin(url, href)
-            subpage, content = parse_page(full_url, output_dir, depth + 1)
+            subpage, content = parse_page(full_url, sub_output_dir, sub_output_dir_image)
             if subpage:
                 page_content.append(generate_markdown_header(subtitle))
                 page_content.append(content)
@@ -339,7 +340,7 @@ def main():
     args = GetArgs()
     output_file = os.path.join(args.output_dir, "readme.csv")
 
-    items = parse_page(args.url, args.output_dir, 0)
+    items = parse_page(args.url, args.output_dir, os.path.join(args.output_dir, 'image'))
     print("total papers: ", len(items))
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
