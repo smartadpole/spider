@@ -211,15 +211,33 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
     # 提前提取标题
     title = extract_first_valid_text(target_div)
 
+    def clean_content(content):
+        """Remove \r\n and excess spaces from content."""
+        content = content.replace('\r\n', '').replace('\n', '').replace('\r', '')
+        content = re.sub(r'\s+', ' ', content)  # 替换多个空格为单个空格
+        return content.strip()  # 去除首尾空格
+
     def process_element(element):
         """Recursive function to process HTML elements into Markdown, preserving whitespace."""
         if isinstance(element, str):
-            content = element
-        elif element.name in ['p', 'div', 'span']:
-            content = ''.join(process_element(e) for e in element.contents)
+            return clean_content(element)
+        elif element.name == 'br':
+            return '\n'
+        elif element.name == 'div':
+            inner_content = ''.join(process_element(e) for e in element.contents)
+            return f"\n{inner_content}"  # 在 </div> 结束时加换行
+        elif element.name in ['p', 'span', 'sup', 'sub']:
+            # 处理 p, span, sup, sub 标签，不换行处理
+            content = clean_content(''.join(process_element(e) for e in element.contents))
+            if element.name == 'sup':
+                return f"^{content}^"  # 上标的 Markdown 语法
+            elif element.name == 'sub':
+                return f"~{content}~"  # 下标的 Markdown 语法
+            else:
+                return content
         elif element.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:  # 确保处理的只是合法的标题标签
             level = element.name[1]  # h1 -> 1, h2 -> 2, etc.
-            content = f"{'#' * int(level)} {element.get_text().strip()}\n"
+            return f"{'#' * int(level)} {clean_content(element.get_text().strip())}\n"
         elif element.name == 'img':
             img_url = element.get('src')
             if img_url:
@@ -231,28 +249,26 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
 
                 # 生成相对路径
                 relative_img_path = os.path.relpath(img_save_path, start=output_dir)
-                content = f"![{element.get('alt', '')}]({relative_img_path})"
+                return f"![{element.get('alt', '')}]({relative_img_path})"
             else:
-                content = ''
+                return ''
         elif element.name == 'a':
-            link_text = ''.join(process_element(e) for e in element.contents)
+            link_text = clean_content(''.join(process_element(e) for e in element.contents))
             link_url = urljoin(page_url, element.get('href'))
-            content = f"[{link_text}]({link_url})"
+            return f"[{link_text}]({link_url})"
         elif element.name == 'li':
-            content = f"* {''.join(process_element(e) for e in element.contents)}\n"
+            return f"* {clean_content(''.join(process_element(e) for e in element.contents))}\n"
         elif element.name == 'ul':
-            content = '\n'.join(f"* {process_element(li)}" for li in element.find_all('li')) + '\n'
+            return '\n'.join(f"* {process_element(li)}" for li in element.find_all('li')) + '\n'
         elif element.name == 'ol':
-            content = '\n'.join(f"{i+1}. {process_element(li)}" for i, li in enumerate(element.find_all('li'))) + '\n'
+            return '\n'.join(f"{i+1}. {process_element(li)}" for i, li in enumerate(element.find_all('li'))) + '\n'
         else:
-            content = ''.join(process_element(e) for e in element.contents)
-
-        return content
+            return clean_content(''.join(process_element(e) for e in element.contents))
 
     for element in target_div.children:
         content = process_element(element)
         if content.strip():  # 仅在内容非空时追加，去掉独立的空行
-            markdown_content.append(content + "  ")
+            markdown_content.append(content)
 
     return title, markdown_content
 
@@ -299,6 +315,10 @@ def parse_page(url, output_dir, output_dir_image):
     title, markdown_content = convert_html_to_markdown(main_content, url, output_dir, output_dir_image)
     title = title.replace('/', '_').replace(' ', '_')
 
+    global flag
+    if '600问' in title:
+        flag = True
+
     has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
         if has_toc[0].text.replace(' ', '') == "目录":
@@ -310,7 +330,7 @@ def parse_page(url, output_dir, output_dir_image):
 # Save the Markdown content
     markdown_filename = os.path.join(output_dir, f"{title}_TOC.md")
     MkdirSimple(markdown_filename)
-    save_markdown(''.join(markdown_content), markdown_filename)
+    save_markdown('\n'.join(markdown_content), markdown_filename)
 
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
@@ -328,7 +348,7 @@ def parse_page(url, output_dir, output_dir_image):
                 page_content.append(generate_markdown_header(subtitle))
                 # if subpage, convert the relative image path
                 content = [c.replace('](../', '](') for c in content]
-                page_content.append(''.join(content))
+                page_content.append('\n'.join(content))
 
     if len(page_content) > 0:
         markdown_filename = os.path.join(output_dir, f"{title}.md")
