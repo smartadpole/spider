@@ -199,7 +199,7 @@ def extract_first_valid_text(soup):
         return element  # 返回第一个有效字符串
     return "Untitled"  # 如果没有有效字符串，使用默认标题
 
-def convert_html_to_markdown(soup, page_url, output_dir):
+def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
     """Convert HTML content to Markdown format, preserving original whitespace and indentation."""
     markdown_content = []
 
@@ -225,10 +225,13 @@ def convert_html_to_markdown(soup, page_url, output_dir):
             if img_url:
                 full_img_url = urljoin(page_url, img_url)
                 img_name = os.path.basename(urlparse(full_img_url).path)
-                img_save_path = os.path.join(output_dir, img_name)
+                img_save_path = os.path.join(output_dir_img, img_name)
                 MkdirSimple(img_save_path)
                 save_image(full_img_url, img_save_path)
-                content = f"![{element.get('alt', '')}]({img_name})"
+
+                # 生成相对路径
+                relative_img_path = os.path.relpath(img_save_path, start=output_dir)
+                content = f"![{element.get('alt', '')}]({relative_img_path})"
             else:
                 content = ''
         elif element.name == 'a':
@@ -251,7 +254,7 @@ def convert_html_to_markdown(soup, page_url, output_dir):
         if content.strip():  # 仅在内容非空时追加，去掉独立的空行
             markdown_content.append(content + "  ")
 
-    return title, ''.join(markdown_content)
+    return title, markdown_content
 
 def GetArticlesUrl(soup):
     items = []
@@ -293,8 +296,8 @@ def parse_page(url, output_dir, output_dir_image):
         print("error get main content.")
         return
 
-    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir_image)
-    title = title.replace('/', '_')
+    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir, output_dir_image)
+    title = title.replace('/', '_').replace(' ', '_')
 
     has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
@@ -307,7 +310,7 @@ def parse_page(url, output_dir, output_dir_image):
 # Save the Markdown content
     markdown_filename = os.path.join(output_dir, f"{title}_TOC.md")
     MkdirSimple(markdown_filename)
-    save_markdown(markdown_content, markdown_filename)
+    save_markdown(''.join(markdown_content), markdown_filename)
 
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
@@ -323,7 +326,9 @@ def parse_page(url, output_dir, output_dir_image):
             subpage, content = parse_page(full_url, sub_output_dir, sub_output_dir_image)
             if subpage:
                 page_content.append(generate_markdown_header(subtitle))
-                page_content.append(content)
+                # if subpage, convert the relative image path
+                content = [c.replace('](../', '](') for c in content]
+                page_content.append(''.join(content))
 
     if len(page_content) > 0:
         markdown_filename = os.path.join(output_dir, f"{title}.md")
