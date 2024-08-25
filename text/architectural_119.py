@@ -212,10 +212,8 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
     title = extract_first_valid_text(target_div)
 
     def clean_content(content):
-        """Remove \r\n and excess spaces from content."""
-        content = content.replace('\r\n', '').replace('\n', '').replace('\r', '')
-        content = re.sub(r'\s+', ' ', content)  # 替换多个空格为单个空格
-        return content.strip()  # 去除首尾空格
+        content = re.sub(r'[ \t]+', ' ', content)  # 替换空格和制表符为单个空格
+        return content
 
     def process_element(element):
         """Recursive function to process HTML elements into Markdown, preserving whitespace."""
@@ -225,7 +223,7 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
             return '\n'
         elif element.name == 'div':
             inner_content = ''.join(process_element(e) for e in element.contents)
-            return f"\n{inner_content}"  # 在 </div> 结束时加换行
+            return f"\n{inner_content}\n"  # 在 </div> 结束时加换行
         elif element.name in ['p', 'span', 'sup', 'sub']:
             # 处理 p, span, sup, sub 标签，不换行处理
             content = clean_content(''.join(process_element(e) for e in element.contents))
@@ -267,10 +265,12 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
 
     for element in target_div.children:
         content = process_element(element)
-        if content.strip():  # 仅在内容非空时追加，去掉独立的空行
-            markdown_content.append(content)
+        markdown_content.append(content)
 
-    return title, markdown_content
+    # 合并连续的换行符并保留单个换行符
+    final_content = '\n'.join(line for line in ''.join(markdown_content).splitlines() if line.strip())
+
+    return title, final_content
 
 def GetArticlesUrl(soup):
     items = []
@@ -330,7 +330,7 @@ def parse_page(url, output_dir, output_dir_image):
 # Save the Markdown content
     markdown_filename = os.path.join(output_dir, f"{title}_TOC.md")
     MkdirSimple(markdown_filename)
-    save_markdown('\n'.join(markdown_content), markdown_filename)
+    save_markdown(''.join(markdown_content), markdown_filename)
 
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
@@ -347,8 +347,8 @@ def parse_page(url, output_dir, output_dir_image):
             if subpage:
                 page_content.append(generate_markdown_header(subtitle))
                 # if subpage, convert the relative image path
-                content = [c.replace('](../', '](') for c in content]
-                page_content.append('\n'.join(content))
+                content = content.replace('](../', '](')
+                page_content.append(''.join(content))
 
     if len(page_content) > 0:
         markdown_filename = os.path.join(output_dir, f"{title}.md")
