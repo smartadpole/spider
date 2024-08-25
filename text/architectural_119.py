@@ -24,7 +24,8 @@ import re
 from util.file import WriteTxt, MkdirSimple
 import csv
 import io
-import datetime
+import markdown2
+from weasyprint import HTML, CSS
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -181,6 +182,8 @@ def save_markdown(content, filename):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(content)
 
+    # markdown_to_pdf(content, filename.replace('.md', '.pdf'))
+
 def save_image(image_url, save_path):
     try:
         response = requests.get(image_url, verify=False)
@@ -199,17 +202,25 @@ def extract_first_valid_text(soup):
         return element  # 返回第一个有效字符串
     return "Untitled"  # 如果没有有效字符串，使用默认标题
 
+def markdown_to_pdf(markdown_string, output_pdf_path):
+    html_content = markdown2.markdown(markdown_string, extras=["break-on-newline"])
+    html_content = html_content.replace('src="', f'src="{os.path.dirname(output_pdf_path)}/')
+    HTML(string=html_content).write_pdf(output_pdf_path)
+
 def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
     """Convert HTML content to Markdown format, preserving original whitespace and indentation."""
     markdown_content = []
+    html_content = ""
 
     # 提取目标 div 中的内容
     target_div = soup.find('div', class_='b_con')
     if not target_div:
         target_div = soup
 
+
     # 提前提取标题
     title = extract_first_valid_text(target_div)
+    html_content += str(target_div)
 
     def clean_content(content):
         content = re.sub(r'[ \t]+', ' ', content)  # 替换空格和制表符为单个空格
@@ -270,7 +281,7 @@ def convert_html_to_markdown(soup, page_url, output_dir, output_dir_img):
     # 合并连续的换行符并保留单个换行符
     final_content = '\n'.join(line for line in ''.join(markdown_content).splitlines() if line.strip())
 
-    return title, final_content
+    return title, final_content, html_content
 
 def GetArticlesUrl(soup):
     items = []
@@ -301,6 +312,37 @@ def generate_markdown_header(subtitle):
     # 生成最终的 Markdown 标题
     return f"{header_level} {subtitle}"
 
+def generate_html_header(subtitle):
+    header_level = subtitle.count('.')
+    html_header = f"<h{header_level}>{subtitle}</h{header_level}>"
+
+    return html_header
+
+def convert_html_to_absolute_links(html_content, base_url):
+    """Convert all relative links in HTML content to absolute links."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Convert all <a> tags' href attributes
+    for a_tag in soup.find_all('a', href=True):
+        a_tag['href'] = urljoin(base_url, a_tag['href'])
+
+    # Convert all <img> tags' src attributes
+    for img_tag in soup.find_all('img', src=True):
+        img_tag['src'] = urljoin(base_url, img_tag['src'])
+
+        # Set max width for images
+        img_tag['style'] = "max-width: 100%; height: auto;"
+
+    return str(soup)
+
+def save_html_as_pdf(html_content, output_pdf_path, base_url):
+    """Convert HTML content to PDF and save it."""
+    html_content_with_absolute_links = convert_html_to_absolute_links(html_content, base_url)
+    HTML(string=html_content_with_absolute_links, base_url=base_url).write_pdf(output_pdf_path)
+
+    html_filename = os.path.splitext(output_pdf_path)[0] + '.html'
+    with open(html_filename, 'w', encoding='utf-8') as f:
+        f.write(html_content)
 
 def parse_page(url, output_dir, output_dir_image):
     global PAGE_COUNT
@@ -312,7 +354,7 @@ def parse_page(url, output_dir, output_dir_image):
         print("error get main content.")
         return
 
-    title, markdown_content = convert_html_to_markdown(main_content, url, output_dir, output_dir_image)
+    title, markdown_content, html_content = convert_html_to_markdown(main_content, url, output_dir, output_dir_image)
     title = title.replace('/', '_').replace(' ', '_')
 
     global flag
@@ -322,7 +364,7 @@ def parse_page(url, output_dir, output_dir_image):
     has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
         if has_toc[0].text.replace(' ', '') == "目录":
-            return has_toc, markdown_content
+            return has_toc, markdown_content, html_content
     else:
         print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
         PAGE_COUNT += 1
@@ -331,11 +373,14 @@ def parse_page(url, output_dir, output_dir_image):
     markdown_filename = os.path.join(output_dir, f"{title}_TOC.md")
     MkdirSimple(markdown_filename)
     save_markdown(''.join(markdown_content), markdown_filename)
+    save_html_as_pdf(html_content, markdown_filename.replace('.md',".pdf"), url)
 
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
     links = [li.find('a') for li in links if li.find('a')]
     page_content = []
+    page_html = ""
+
     for link in links:
         sub_output_dir = os.path.join(output_dir, title)
         sub_output_dir_image = os.path.join(output_dir_image, title)
@@ -343,19 +388,22 @@ def parse_page(url, output_dir, output_dir_image):
         subtitle = link.text
         if href:
             full_url = urljoin(url, href)
-            subpage, content = parse_page(full_url, sub_output_dir, sub_output_dir_image)
+            subpage, content, html_content = parse_page(full_url, sub_output_dir, sub_output_dir_image)
             if subpage:
                 page_content.append(generate_markdown_header(subtitle))
                 # if subpage, convert the relative image path
                 content = content.replace('](../', '](')
                 page_content.append(''.join(content))
+                page_html += generate_html_header(subtitle)
+                page_html += html_content
 
     if len(page_content) > 0:
         markdown_filename = os.path.join(output_dir, f"{title}.md")
         MkdirSimple(markdown_filename)
         save_markdown('\n'.join(page_content), markdown_filename)
+        save_html_as_pdf(page_html, markdown_filename.replace('.md',".pdf"), url)
 
-    return False, markdown_content
+    return False, page_content, page_html
 
 def main():
     # 禁用 InsecureRequestWarning 警告
