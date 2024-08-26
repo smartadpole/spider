@@ -313,8 +313,8 @@ def generate_markdown_header(subtitle):
     return f"{header_level} {subtitle}"
 
 def generate_html_header(subtitle):
-    header_level = subtitle.count('.')
-    html_header = f"<h{header_level}>{subtitle}</h{header_level}>"
+    header_level = subtitle.count('.') + 1
+    html_header = f'<div style="margin-bottom:40px;"><h{header_level} style="text-align:center;>{subtitle}</h{header_level}><hr style="border: 1px solid #eeeeee" width=""></div>'
 
     return html_header
 
