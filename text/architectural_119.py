@@ -225,12 +225,28 @@ def save(type, content, file):
         file = os.path.splitext(file)[0] + '.md'
         save_markdown(content, file)
 
+def get_all_pagination_links(soup, base_url):
+    """Extract all pagination links from the soup."""
+    page_links = []
+    pager_div = soup.find('div', class_='pager')
+    if pager_div:
+        links = pager_div.find_all('a', href=True)
+        last_page_link = links[-1]['href']
+        last_page_number = int(re.search(r'\d+', last_page_link).group())
+        match = re.search(r'_(\d+)(\.\w+)$', last_page_link)
+        if match:
+            base_link = last_page_link[:match.start(1)]
+            suffix = match.group(2)
+            page_links = [urljoin(base_url, f"{base_link}{i}{suffix}") for i in range(1, last_page_number + 1)]
+
+    return page_links
 
 def parse_page(type, url, output_dir, output_dir_image):
     global PAGE_COUNT
     """Parse the page and extract the nested content."""
-    content = get_page_content(url)
-    soup = BeautifulSoup(content, 'html.parser')
+    page_content = get_page_content(url)
+    soup = BeautifulSoup(page_content, 'html.parser')
+
     main_content = soup.find('div', class_='zjtj_list')
     if not main_content:
         print("error get main content.")
@@ -283,6 +299,14 @@ def parse_page(type, url, output_dir, output_dir_image):
 
     return False, page_content
 
+def parse_multi_page(type, url, output_dir, output_dir_image):
+    page_content = get_page_content(url)
+    soup = BeautifulSoup(page_content, 'html.parser')
+    page_links = get_all_pagination_links(soup, url)
+
+    for page_link in page_links:
+        parse_page(type, page_link, output_dir, output_dir_image)
+
 def main():
     # 禁用 InsecureRequestWarning 警告
     import urllib3
@@ -292,8 +316,7 @@ def main():
 
     socket.setdefaulttimeout(60)
 
-    items = parse_page(args.type, args.url, args.output_dir, os.path.join(args.output_dir, 'image'))
-    print("total papers: ", len(items))
+    parse_multi_page(args.type, args.url, args.output_dir, os.path.join(args.output_dir, 'image'))
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
