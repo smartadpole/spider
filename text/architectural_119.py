@@ -12,16 +12,12 @@ import sys, os
 CURRENT_DIR = os.path.dirname(__file__)
 sys.path.append(os.path.join(CURRENT_DIR, '../'))
 
-import math
 import time
-from tqdm import tqdm
 import argparse
 import os
-import urllib
 import re
 from util.file import WriteTxt, MkdirSimple
-import csv
-import io
+import socket
 import markdown2
 from weasyprint import HTML
 import requests
@@ -259,10 +255,6 @@ def parse_page(type, url, output_dir, output_dir_image):
         print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
         PAGE_COUNT += 1
 
-# Save the Markdown content
-    toc_file = os.path.join(output_dir, f"{title}_TOC.md")
-    save(type, content, toc_file)
-
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
     links = [li.find('a') for li in links if li.find('a')]
@@ -297,7 +289,8 @@ def main():
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     args = GetArgs()
-    output_file = os.path.join(args.output_dir, "readme.csv")
+
+    socket.setdefaulttimeout(60)
 
     items = parse_page(args.type, args.url, args.output_dir, os.path.join(args.output_dir, 'image'))
     print("total papers: ", len(items))
