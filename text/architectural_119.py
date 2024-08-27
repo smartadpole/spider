@@ -219,17 +219,21 @@ def convert_html_to_absolute_links(content, base_url):
 
 def save_html_as_pdf(html_content, output_pdf_path):
     """Convert HTML content to PDF and save it."""
-    def custom_url_fetcher(url, timeout=60):
-        try:
-            response = requests.get(url, timeout=timeout)
-            response.raise_for_status()
-            return {
-                'string': response.content,
-                'mime_type': response.headers['Content-Type'],
-            }
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching {url}: {e}")
-            return {'string': '', 'mime_type': 'text/html'}  # 返回空内容，避免报错
+    def custom_url_fetcher(url, retries=3):
+        attempt = 0
+        while attempt < retries:
+            try:
+                response = requests.get(url, timeout=60)
+                response.raise_for_status()
+                return {
+                    'string': response.content,
+                    'mime_type': response.headers['Content-Type'],
+                }
+            except requests.exceptions.RequestException as e:
+                attempt += 1
+                print(f"Attempt {attempt} failed: {e}")
+                if attempt >= retries:
+                    raise
 
     HTML(string=html_content, url_fetcher=custom_url_fetcher).write_pdf(output_pdf_path)
 
