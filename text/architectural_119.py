@@ -237,9 +237,17 @@ def save_html_as_pdf(html_content, output_pdf_path):
 
     HTML(string=html_content, url_fetcher=custom_url_fetcher).write_pdf(output_pdf_path)
 
-    html_filename = os.path.splitext(output_pdf_path)[0] + '.html'
-    with open(html_filename, 'w', encoding='utf-8') as f:
-        f.write(html_content)
+    try:
+        # 尝试生成 PDF
+        HTML(string=html_content, url_fetcher=custom_url_fetcher).write_pdf(output_pdf_path)
+
+        html_filename = os.path.splitext(output_pdf_path)[0] + '.html'
+        with open(html_filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    except Exception as e:
+        # 如果出现异常，删除已生成的 PDF 文件（如果存在）
+        if os.path.exists(output_pdf_path):
+            os.remove(output_pdf_path)
 
 def save(type, content, file):
     MkdirSimple(file)
