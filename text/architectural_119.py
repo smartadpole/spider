@@ -43,13 +43,26 @@ def GetArgs():
 
 def get_page_content(url):
     """Get the content of the page."""
-    try:
-        response = requests.get(url)
-    except requests.exceptions.RequestException as e:
-        time.sleep(1)  # 延迟请求
-        response = requests.get(url)
-    response.raise_for_status()
-    return response.text
+    attempt = 0
+    retries = 5
+    delay = 2
+    while attempt < retries:
+        try:
+            response = requests.get(url, verify=False, timeout=10)
+            response.raise_for_status()  # 如果响应状态码不是 200，抛出异常
+            return response.text
+        except (requests.exceptions.SSLError, requests.exceptions.ConnectionError) as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            attempt += 1
+            if attempt < retries:
+                time.sleep(delay)  # 等待一段时间后重试
+            else:
+                print("Max retries exceeded. Could not fetch the content.")
+                raise  # 重试次数用尽后，抛出最后的异常
+        except requests.exceptions.RequestException as e:
+            # 处理其他可能的异常情况
+            print(f"An error occurred: {e}")
+            raise
 
 def save_markdown(content, filename):
     """Save Markdown content to a file."""
