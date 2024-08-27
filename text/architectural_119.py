@@ -219,7 +219,19 @@ def convert_html_to_absolute_links(content, base_url):
 
 def save_html_as_pdf(html_content, output_pdf_path):
     """Convert HTML content to PDF and save it."""
-    HTML(string=html_content).write_pdf(output_pdf_path)
+    def custom_url_fetcher(url, timeout=60):
+        try:
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+            return {
+                'string': response.content,
+                'mime_type': response.headers['Content-Type'],
+            }
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching {url}: {e}")
+            return {'string': '', 'mime_type': 'text/html'}  # 返回空内容，避免报错
+
+    HTML(string=html_content, url_fetcher=custom_url_fetcher).write_pdf(output_pdf_path)
 
     html_filename = os.path.splitext(output_pdf_path)[0] + '.html'
     with open(html_filename, 'w', encoding='utf-8') as f:
