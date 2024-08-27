@@ -48,10 +48,10 @@ def get_page_content(url):
     delay = 2
     while attempt < retries:
         try:
-            response = requests.get(url, verify=False, timeout=10)
+            response = requests.get(url, verify=False, timeout=20)
             response.raise_for_status()  # 如果响应状态码不是 200，抛出异常
             return response.text
-        except (requests.exceptions.SSLError, requests.exceptions.ConnectionError) as e:
+        except requests.exceptions.RequestException as e:
             print(f"Attempt {attempt + 1} failed: {e}")
             attempt += 1
             if attempt < retries:
@@ -59,10 +59,6 @@ def get_page_content(url):
             else:
                 print("Max retries exceeded. Could not fetch the content.")
                 raise  # 重试次数用尽后，抛出最后的异常
-        except requests.exceptions.RequestException as e:
-            # 处理其他可能的异常情况
-            print(f"An error occurred: {e}")
-            raise
 
 def save_markdown(content, filename):
     """Save Markdown content to a file."""
@@ -252,8 +248,21 @@ def get_all_pagination_links(soup, base_url):
 
     return page_links
 
-def parse_page(type, url, output_dir, output_dir_image):
+def get_filename(title, output_dir, type):
+    title = title.replace('/', '_').replace(' ', '_')
+    suffix = 'md' if 'markdown' == type else 'pdf'
+    file = os.path.join(output_dir, f"{title}.{suffix}")
+
+    return file
+
+def parse_page(type, title, url, output_dir, output_dir_image):
     global PAGE_COUNT
+
+    if '' != title and os.path.exists(get_filename(title, output_dir, type)):
+        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url} already exist.")
+        PAGE_COUNT += 1
+        return False, ""
+
     """Parse the page and extract the nested content."""
     page_content = get_page_content(url)
     soup = BeautifulSoup(page_content, 'html.parser')
@@ -264,18 +273,12 @@ def parse_page(type, url, output_dir, output_dir_image):
         return
 
     title = extract_first_valid_text(main_content)
-    title = title.replace('/', '_').replace(' ', '_')
-    file = os.path.join(output_dir, f"{title}.pdf")
-    if 'markdown' == type:
-        file = os.path.join(output_dir, f"{title}.md")
+    file = get_filename(title, output_dir, type)
 
     has_toc = soup.find_all('a', class_='round_button')
     if not has_toc:
         print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
         PAGE_COUNT += 1
-        if os.path.exists(file):
-            print('already exist.')
-            return False, page_content
 
     if 'pdf' == type:
         content = str(clean_html(main_content, url))
@@ -299,9 +302,10 @@ def parse_page(type, url, output_dir, output_dir_image):
         sub_output_dir_image = os.path.join(output_dir_image, title)
         href = link.get('href')
         subtitle = link.text
+
         if href:
             full_url = urljoin(url, href)
-            subpage, content = parse_page(type, full_url, sub_output_dir, sub_output_dir_image)
+            subpage, content = parse_page(type, subtitle, full_url, sub_output_dir, sub_output_dir_image)
             if subpage:
                 if 'pdf' == type:
                     page_content += generate_html_header(subtitle)
@@ -322,7 +326,7 @@ def parse_multi_page(type, url, output_dir, output_dir_image):
     page_links = get_all_pagination_links(soup, url)
 
     for page_link in page_links:
-        parse_page(type, page_link, output_dir, output_dir_image)
+        parse_page(type, "", page_link, output_dir, output_dir_image)
 
 def main():
     # 禁用 InsecureRequestWarning 警告
