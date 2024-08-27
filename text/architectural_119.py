@@ -232,10 +232,8 @@ def save_html_as_pdf(html_content, output_pdf_path):
 def save(type, content, file):
     MkdirSimple(file)
     if 'pdf' == type:
-        file = os.path.splitext(file)[0] + '.pdf'
         save_html_as_pdf(content, file)
     else:
-        file = os.path.splitext(file)[0] + '.md'
         save_markdown(content, file)
 
 def get_all_pagination_links(soup, base_url):
@@ -267,6 +265,17 @@ def parse_page(type, url, output_dir, output_dir_image):
 
     title = extract_first_valid_text(main_content)
     title = title.replace('/', '_').replace(' ', '_')
+    file = os.path.join(output_dir, f"{title}.pdf")
+    if 'markdown' == type:
+        file = os.path.join(output_dir, f"{title}.md")
+
+    has_toc = soup.find_all('a', class_='round_button')
+    if not has_toc:
+        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
+        PAGE_COUNT += 1
+        if os.path.exists(file):
+            print('already exist.')
+            return False, page_content
 
     if 'pdf' == type:
         content = str(clean_html(main_content, url))
@@ -276,13 +285,9 @@ def parse_page(type, url, output_dir, output_dir_image):
     else:
         return False, ""
 
-    has_toc = soup.find_all('a', class_='round_button')
     if has_toc:
         if has_toc[0].text.replace(' ', '') == "目录":
             return has_toc, content
-    else:
-        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
-        PAGE_COUNT += 1
 
     # Recursively follow links to get the final content
     links = main_content.find_all('li')
@@ -307,7 +312,6 @@ def parse_page(type, url, output_dir, output_dir_image):
                     page_content += '\n{}\n{}'.format(generate_markdown_header(subtitle), content)
 
     if len(page_content) > 0:
-        file = os.path.join(output_dir, f"{title}.md")
         save(type, page_content, file)
 
     return False, page_content
