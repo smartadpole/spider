@@ -48,7 +48,7 @@ def get_page_content(url):
     delay = 2
     while attempt < retries:
         try:
-            response = requests.get(url, verify=False, timeout=20)
+            response = requests.get(url, verify=False, timeout=60)
             response.raise_for_status()  # 如果响应状态码不是 200，抛出异常
             return response.text
         except requests.exceptions.RequestException as e:
@@ -288,7 +288,10 @@ def parse_page(type, title, url, output_dir, output_dir_image):
         return False, ""
 
     """Parse the page and extract the nested content."""
-    page_content = get_page_content(url)
+    try:
+        page_content = get_page_content(url)
+    except:
+        return False, ""
     soup = BeautifulSoup(page_content, 'html.parser')
 
     main_content = soup.find('div', class_='zjtj_list')
