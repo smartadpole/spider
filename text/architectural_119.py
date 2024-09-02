@@ -31,7 +31,9 @@ ITEMS_NUM = 200
 SERCH_TYPE = 'title'  # all
 COMMENTS = ['cvpr', 'iccv', 'iclr']
 INVALID = False
-PAGE_COUNT = 0
+artical_id = 0
+page_id = 0
+page_count = 0
 
 def GetArgs():
     parse = argparse.ArgumentParser()
@@ -268,7 +270,7 @@ def get_all_pagination_links(soup, base_url):
         if match:
             base_link = last_page_link[:match.start(1)]
             suffix = match.group(2)
-            page_links = [urljoin(base_url, f"{base_link}{i}{suffix}") for i in range(1, last_page_number + 1)]
+            page_links = [(urljoin(base_url, f"{base_link}{i}{suffix}"), i) for i in range(1, last_page_number + 1)]
 
     return page_links
 
@@ -280,11 +282,11 @@ def get_filename(title, output_dir, type):
     return file
 
 def parse_page(type, title, url, output_dir, output_dir_image):
-    global PAGE_COUNT
+    global artical_id, page_id, page_count
 
     if '' != title and os.path.exists(get_filename(title, output_dir, type)):
-        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url} already exist.")
-        PAGE_COUNT += 1
+        print(f"ID:{artical_id} | Page {page_id}/{page_count} | parse {title} from url: {url} already exists.")
+        artical_id += 1
         return False, ""
 
     """Parse the page and extract the nested content."""
@@ -296,7 +298,7 @@ def parse_page(type, title, url, output_dir, output_dir_image):
 
     main_content = soup.find('div', class_='zjtj_list')
     if not main_content:
-        print("error get main content.")
+        print(f"Error: Failed to get main content from page {page_number}. URL: {url}")
         return
 
     title = extract_first_valid_text(main_content)
@@ -304,8 +306,8 @@ def parse_page(type, title, url, output_dir, output_dir_image):
 
     has_toc = soup.find_all('a', class_='round_button')
     if not has_toc:
-        print(f"ID:{PAGE_COUNT} | parse {title} from url: {url}")
-        PAGE_COUNT += 1
+        print(f"ID:{artical_id} | Page {page_id}/{page_count} | parse {title} from url: {url}")
+        artical_id += 1
 
     if 'pdf' == type:
         content = str(clean_html(main_content, url))
@@ -348,11 +350,13 @@ def parse_page(type, title, url, output_dir, output_dir_image):
     return False, page_content
 
 def parse_multi_page(type, url, output_dir, output_dir_image):
+    global page_id, page_count
     page_content = get_page_content(url)
     soup = BeautifulSoup(page_content, 'html.parser')
     page_links = get_all_pagination_links(soup, url)
+    page_count = len(page_links)
 
-    for page_link in page_links:
+    for page_link, page_id in page_links:
         parse_page(type, "", page_link, output_dir, output_dir_image)
 
 def main():
