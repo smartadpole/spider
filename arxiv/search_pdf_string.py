@@ -39,6 +39,7 @@ def GetArgs():
     parse.add_argument("--query", type=str, nargs='+', help="List of keywords to search for")
     parse.add_argument("--output_dir", type=str, default="./file")
     parse.add_argument("--min_id", type=str, help="Minimum ID to download", default="")
+    parse.add_argument("--blocked_keywords", type=str, nargs='*', help="List of keywords to block", default=[])
 
     return parse.parse_args()
 
@@ -113,7 +114,7 @@ def GetArticalUrl(page_urls, min_id):
     return urls
 
 
-def ParseArXiv(keywords, min_id):
+def ParseArXiv(keywords, min_id, blocked_keywords):
     all_urls = []
     for key in keywords:
         if key.split()[0].lower() in COMMENTS:
@@ -128,6 +129,8 @@ def ParseArXiv(keywords, min_id):
             content = response.text
             page_urls = GetPages(baseurl, content)
             urls = GetArticalUrl(page_urls, min_id)
+            # Filter out items containing blocked keywords
+            urls = [url for url in urls if not any(blocked_keyword in url['title'] for blocked_keyword in blocked_keywords)]
             all_urls.extend(urls)
         else:
             print("Response URL:", response.url)
@@ -175,7 +178,7 @@ def main():
         date = datetime.date.today().strftime("%Y-%m-%d")
         output_file = os.path.join(args.output_dir, "readme_{}.csv".format(date))
 
-    items = ParseArXiv(args.query, args.min_id)
+    items = ParseArXiv(args.query, args.min_id, args.blocked_keywords)
     print("total papers: ", len(items))
 
     SaveCSV(items, output_file)
