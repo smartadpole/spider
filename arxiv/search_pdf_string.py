@@ -36,7 +36,7 @@ INVALID = False
 
 def GetArgs():
     parse = argparse.ArgumentParser()
-    parse.add_argument("--query", type=str)
+    parse.add_argument("--query", type=str, nargs='+', help="List of keywords to search for")
     parse.add_argument("--output_dir", type=str, default="./file")
     parse.add_argument("--min_id", type=str, help="Minimum ID to download", default="")
 
@@ -113,29 +113,29 @@ def GetArticalUrl(page_urls, min_id):
     return urls
 
 
-def ParseArXiv(key, min_id):
-    if key.split()[0].lower() in COMMENTS:
-        baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, "comments", ITEMS_NUM)
-    else:
-        if '+' in key:
-            baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+def ParseArXiv(keywords, min_id):
+    all_urls = []
+    for key in keywords:
+        if key.split()[0].lower() in COMMENTS:
+            baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, "comments", ITEMS_NUM)
         else:
-            baseurl = "https://arxiv.org/search/?query=\"{}\"&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
-    response = requests.get(baseurl)
-    if response.status_code == 200:
-        content = response.text
-        page_urls = GetPages(baseurl, content)
-        urls = GetArticalUrl(page_urls, min_id)
+            if '+' in key:
+                baseurl = "https://arxiv.org/search/?query={}&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+            else:
+                baseurl = "https://arxiv.org/search/?query=\"{}\"&searchtype={}&abstracts=show&order=-announced_date_first&size={}".format(key, SERCH_TYPE, ITEMS_NUM)
+        response = requests.get(baseurl)
+        if response.status_code == 200:
+            content = response.text
+            page_urls = GetPages(baseurl, content)
+            urls = GetArticalUrl(page_urls, min_id)
+            all_urls.extend(urls)
+        else:
+            print("Response URL:", response.url)
+            print("Response Status Code:", response.status_code)
+            print("Response Reason:", response.reason)
+            print("Response Elapsed Time:", response.elapsed)
 
-        return urls
-    else:
-        print("Response URL:", response.url)
-        print("Response Status Code:", response.status_code)
-        print("Response Reason:", response.reason)
-        print("Response Elapsed Time:", response.elapsed)
-
-    return []
-
+    return all_urls
 
 def Download(items, output: str, usetitle=False):
     os.makedirs(output, exist_ok=True)
@@ -166,7 +166,6 @@ def SaveCSV(items, file):
     text = output.getvalue().strip()
     WriteTxt(text, file, 'w')
 
-
 def main():
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
     args = GetArgs()
@@ -182,7 +181,6 @@ def main():
     SaveCSV(items, output_file)
     Download(items, args.output_dir)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
-
 
 if __name__ == "__main__":
     main()

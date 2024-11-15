@@ -20,7 +20,9 @@ python arxiv/search_pdf.py --query low+light --output_dir $output
 # use request, slowly, accuracy
 python arxiv/search_pdf_no_driver.py --query low+light --output_dir $output
 # use request, string, fast
-python arxiv/search_pdf_string.py --query low+light --output_dir $output
+python arxiv/search_pdf_string.py --query "low+light" --output_dir $output
+## multi query
+python arxiv/search_pdf_string.py --query "low+light" "super resolution" --output_dir $output
 
 ``` 
 
