@@ -2,6 +2,7 @@
 import urllib
 from urllib import request
 import requests
+from debian.debtags import output
 from lxml.html import etree
 from selenium import webdriver
 import time
@@ -55,30 +56,24 @@ def GetContent(driver):
     return content
 
 def GetPageNum(content):
-    content_label = "/html/body/div[4]/main/div/div[3]/div"
-    page_num = content.xpath(content_label + "/div/div/a[last() - 1]/text()")
+    page_num = 0
+    pagination_div = content.xpath('//div[contains(@class, "Box-sc-g0xbh4-0") and contains(@class, "gukfho") and contains(@class, "TablePaginationSteps")]')
+    if pagination_div:
+        pagination_div = pagination_div[0]  # 取第一个匹配的元素
 
-    if 0 == len(page_num):
-        page_num = [1,]
+        # 提取所有分页链接
+        page_links = pagination_div.xpath('.//a')
+        if page_links:
+            # 获取总页数，假设最后一个 a 元素是总页数
+            page_num = page_links[-2].text
+            return int(page_num)
 
-    return int(page_num[0])
+    return int(page_num)
 
 def ParseUrls(content):
     urls = []
-    #找到大标签
-    content_label = "/html/body/div[4]/main/div/div[3]/div"
-    codelist = content.xpath(content_label + "/ul[1]/*") # /div[2]/div[1]/*
+    urls = content.xpath('//div[@data-testid="results-list"]//a[@class="Link__StyledLink-sc-14289xe-0 dheQRw"]/@href')
 
-    #大标签内有10个链接
-    for l in codelist:
-        # url = l.xpath("./div[2]/div/a/@href")
-        url = l.xpath("./div/h3/a/@href")
-        if 0 == len(url):
-            url = l.xpath("./div[2]/div/a/@href")
-        url = url[0]
-
-        # if url.endswith("xml"):
-        urls.append(url)
 
     return  urls
 
@@ -152,13 +147,16 @@ def main():
         page_num = GetPageNum(page_content)
         pages = GenUrls(main_page, page_num)
         print("pages num: ", len(pages))
-        cd_dir = "cd {}".format(args.output_dir)
 
         for i, page in enumerate(pages):
             driver.get(page)
             time.sleep(2) # wait for printing info from last `os.system`
             print("page {}: ".format(i + 1))
             urls = []
+            dirs = f'page_{i}'
+            os.makedirs(os.path.join(args.output_dir, dirs), exist_ok=True)
+
+            cd_dir = "cd {}".format(os.path.join(args.output_dir, dirs))
 
             for i in range(50):
                 page_content = GetContent(driver)
