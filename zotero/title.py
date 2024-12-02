@@ -24,11 +24,10 @@ def GetArgs():
 
 def parse_html(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
-
-    items = soup.find_all('li', id=lambda x: x and x.startswith('item_'))
+    items = soup.find_all('li', id=lambda x: x and x.startswith('item_'), class_=True)
     results = []
     for item in items:
-        if item.find('h2') and not item.find('h1'):
+        if item.find('h2'):
             title = item.find('h2').text
         else:
             continue
@@ -43,23 +42,23 @@ def parse_html(html_content):
         other_tags = [tag for tag in tags if tag not in top_conference_tags and tag not in survey_tags]
         results.append((title, date, top_conference_tags, survey_tags, other_tags))
 
-    print("综述")
+    print("综述\n")
     printed_titles = set()
     for title, date, top_conference_tags, survey_tags, other_tags in results:
         if survey_tags and title not in printed_titles:
-            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})\n")
             printed_titles.add(title)
 
-    print("顶会")
+    print("顶会\n")
     for title, date, top_conference_tags, survey_tags, other_tags in results:
         if top_conference_tags and title not in printed_titles:
-            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})\n")
             printed_titles.add(title)
 
-    print("其他")
+    print("其他\n")
     for title, date, top_conference_tags, survey_tags, other_tags in results:
         if other_tags and title not in printed_titles:
-            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})\n")
             printed_titles.add(title)
 
     print("total items: ", len(results))
