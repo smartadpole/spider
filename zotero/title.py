@@ -37,11 +37,33 @@ def parse_html(html_content):
         date = date.strip()
 
         tags = item.find('ul', class_='tags').find_all('li')
-        tags = [tag.text.strip('#')  for tag in tags if tag.text.strip('#') in {'CVPR', 'ICCV', 'ECCV', 'WACV', 'AAAI', 'ACCV', 'ICLR', 'ICML', 'ICRA', 'NIPS'}]
-        results.append((title, date, tags))
+        tags = [tag.text.strip('#') for tag in tags]
+        top_conference_tags = [tag for tag in tags if tag in {'CVPR', 'ICCV', 'ECCV', 'WACV', 'AAAI', 'ACCV', 'ICLR', 'ICML', 'ICRA', 'NIPS'}]
+        survey_tags = [tag for tag in tags if tag == 'survey']
+        other_tags = [tag for tag in tags if tag not in top_conference_tags and tag not in survey_tags]
+        results.append((title, date, top_conference_tags, survey_tags, other_tags))
 
-        print(f"【】{title} ({', '.join(tags)}{f' {date}' if tags else date})")
+    print("综述")
+    printed_titles = set()
+    for title, date, top_conference_tags, survey_tags, other_tags in results:
+        if survey_tags and title not in printed_titles:
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            printed_titles.add(title)
+
+    print("顶会")
+    for title, date, top_conference_tags, survey_tags, other_tags in results:
+        if top_conference_tags and title not in printed_titles:
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            printed_titles.add(title)
+
+    print("其他")
+    for title, date, top_conference_tags, survey_tags, other_tags in results:
+        if other_tags and title not in printed_titles:
+            print(f"【】{title} ({', '.join(top_conference_tags)}{f' {date}' if top_conference_tags else date})")
+            printed_titles.add(title)
+
     print("total items: ", len(results))
+
     return results
 
 def main():
