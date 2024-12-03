@@ -40,6 +40,7 @@ def GetArgs():
     parse.add_argument("--output_dir", type=str, default="./file")
     parse.add_argument("--min_id", type=str, help="Minimum ID to download", default="")
     parse.add_argument("--blocked_keywords", type=str, nargs='*', help="List of keywords to block", default=[])
+    parse.add_argument("--label", type=str, help="Filter label", default="")
 
     return parse.parse_args()
 
@@ -130,6 +131,11 @@ def ParseArXiv(keywords, min_id, blocked_keywords):
             page_urls = GetPages(baseurl, content)
             urls = GetArticalUrl(page_urls, min_id)
             # Filter out items containing blocked keywords
+            if len(blocked_keywords) == 0:
+                all_urls.extend(urls)
+                continue
+            blocked_count = len([url for url in urls if any(blocked_keyword in url['title'] for blocked_keyword in blocked_keywords)])
+            print(f"Blocked {blocked_count} records containing blocked keywords.")
             urls = [url for url in urls if not any(blocked_keyword in url['title'] for blocked_keyword in blocked_keywords)]
             all_urls.extend(urls)
         else:
@@ -140,10 +146,19 @@ def ParseArXiv(keywords, min_id, blocked_keywords):
 
     return all_urls
 
-def Download(items, output: str, usetitle=False):
+def Download(items, output: str, filter_label, usetitle=False):
     os.makedirs(output, exist_ok=True)
 
-    for item in tqdm(items):
+    if filter_label == "":
+        filtered_items = items
+    else:
+        filter_label = filter_label if '.' in filter_label else f'{filter_label}.'
+        filter_label = filter_label.lower()
+        filtered_items = [item for item in items if item['label'].lower().startswith(filter_label)]
+        filtered_count = len(items) - len(filtered_items)
+        print(f"Filtered out {filtered_count} records not containing the label '{filter_label}'.")
+
+    for item in tqdm(filtered_items):
         try:
             url = item['url']
             if usetitle:
@@ -182,7 +197,7 @@ def main():
     print("total papers: ", len(items))
 
     SaveCSV(items, output_file)
-    Download(items, args.output_dir)
+    Download(items, args.output_dir, args.label, False)
     print(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 if __name__ == "__main__":

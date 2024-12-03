@@ -25,6 +25,8 @@ python arxiv/search_pdf_string.py --query "low+light" --output_dir $output
 python arxiv/search_pdf_string.py --query "low+light" "super resolution" --output_dir $output
 ## use block
 python arxiv/search_pdf_string.py --query UAV --blocked_keywords Aerial drone --output_dir $output
+## use label filter
+python arxiv/search_pdf_string.py --query UAV --output_dir $output --label "cs"
 
 ``` 
 
