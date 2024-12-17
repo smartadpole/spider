@@ -37,7 +37,6 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
 
     # Load a font
     font = ImageFont.truetype(font_path, 64)
-    font_box = ImageFont.truetype(font_path, 67)
 
     text_x, text_y = 50, 50
     text_color_box = (0, 0, 0)
@@ -56,7 +55,10 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
         # Draw the text on the frame
         draw = ImageDraw.Draw(frame_pil)
 
-        draw.text((text_x, text_y), text, font=font_box, fill=text_color_box)
+        draw.text((text_x - 1, text_y - 1), text, font=font, fill=text_color_box)
+        draw.text((text_x + 1, text_y - 1), text, font=font, fill=text_color_box)
+        draw.text((text_x - 1, text_y + 1), text, font=font, fill=text_color_box)
+        draw.text((text_x + 1, text_y + 1), text, font=font, fill=text_color_box)
         draw.text((text_x, text_y), text, font=font, fill=text_color)
 
         # Crop the bottom 50 rows
