@@ -74,6 +74,16 @@ pip install google-api-python-client
 python dataset/youtube.py --key "key" --query "jump rope" --output "output"
 ```
 
+## 视频处理
+### 视频转换
+```aiignore
+sudo apt  install ffmpeg
+```
+
+```commandline
+python  video/add_text.py --input 217.mp4 --output 手绘.mp4 --text 噩梦/愤怒/张飞 --font fonts/simhei.ttf 
+```
+
 ## issue
 >Message: session not created: This version of ChromeDriver only supports Chrome version 78     
 

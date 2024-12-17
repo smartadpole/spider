@@ -78,8 +78,9 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
     # Add original background music
     video_clip = VideoFileClip(temp_video_path)
     original_audio = VideoFileClip(input_video_path).audio
-    final_clip = video_clip.with_audio(original_audio)
-    final_clip.write_videofile(output_video_path, codec='libx264')
+    video_with_audio = video_clip.with_audio(original_audio)
+
+    video_with_audio.write_videofile(output_video_path, codec='libx264', audio_codec='aac')
 
     # Remove temporary video file
     os.remove(temp_video_path)
