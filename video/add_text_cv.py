@@ -1,4 +1,3 @@
-
 import os
 import sys
 import argparse
@@ -41,7 +40,6 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
     text_x, text_y = 50, 50
     BG_RATE = 0.5
 
-
     # Process each frame
     while True:
         ret, frame = cap.read()
@@ -51,8 +49,9 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
         # Convert the frame to a PIL image
         frame_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
-        # Draw the text on the frame
-        draw = ImageDraw.Draw(frame_pil)
+        # Create a transparent overlay
+        overlay = Image.new('RGBA', frame_pil.size, (255, 255, 255, 0))
+        draw = ImageDraw.Draw(overlay)
 
         background_color = frame_pil.getpixel((text_x, text_y))
         brightness = sum(background_color[:3]) / 3
@@ -63,9 +62,12 @@ def add_text_to_video(input_video_path, output_video_path, text, font_path):
         text_size = (text_bbox[2] - text_bbox[0], text_bbox[3] - text_bbox[1])
         expand = 30
         ellipse_bbox = [text_x - expand, text_y - expand, text_x + text_size[0] + expand, text_y + text_size[1] + expand]
-        draw.ellipse(ellipse_bbox, fill=background_color)
+        draw.ellipse(ellipse_bbox, fill=background_color + (128,))  # 50% opacity
 
         draw.text((text_x, text_y), text, font=font, fill=text_color)
+
+        # Blend the overlay with the original frame
+        frame_pil = Image.alpha_composite(frame_pil.convert('RGBA'), overlay).convert('RGB')
 
         # Crop the bottom 50 rows
         frame_pil = frame_pil.crop((0, 0, frame_pil.width - LEN_X, frame_pil.height - LEN_Y))
