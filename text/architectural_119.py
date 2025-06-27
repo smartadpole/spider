@@ -28,7 +28,8 @@ ONLY_NEW = True
 
 NUM_FILE = "paper_number.csv"
 ITEMS_NUM = 200
-SERCH_TYPE = 'title'  # all
+SERCH_TYPE = 'all'
+# SERCH_TYPE = 'title'
 COMMENTS = ['cvpr', 'iccv', 'iclr']
 INVALID = False
 artical_id = 0

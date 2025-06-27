@@ -27,6 +27,8 @@ python arxiv/search_pdf_string.py --query "low+light" "super resolution" --outpu
 python arxiv/search_pdf_string.py --query UAV --blocked_keywords Aerial drone --output_dir $output
 ## use label filter
 python arxiv/search_pdf_string.py --query UAV --output_dir $output --label "cs"
+## continue
+python arxiv/search_pdf_string.py --query UAV --output_dir $output --min_id 2505.20653
 
 ``` 
 

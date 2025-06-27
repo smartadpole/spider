@@ -30,10 +30,11 @@ ONLY_NEW = True
 
 NUM_FILE = "paper_number.csv"
 ITEMS_NUM = 200
-SERCH_TYPE = 'title'  # all
+SERCH_TYPE = 'all'
+# SERCH_TYPE = 'title'
 COMMENTS = ['cvpr', 'iccv', 'iclr']
 INVALID = False
-
+0
 def GetArgs():
     parse = argparse.ArgumentParser()
     parse.add_argument("--query", type=str, nargs='+', help="List of keywords to search for")
@@ -63,11 +64,23 @@ def GetPDFUrl(content, min_id):
         label = re.findall(r'">([^<]+)</span>', li_content)
         pdf_match = re.search(r'<a href="([^"]+)">pdf</a>', li_content)
         title_match = re.search(r'<p class="title is-5 mathjax">\s*(.*?)\s*</p>', li_content, re.DOTALL)
+        abstract_match = re.search(r'<span class="abstract-full[^"]*"[^>]*>(.*)</span>', li_content, re.DOTALL)
+        if not abstract_match:
+            abstract_match = re.search(r'<span class="abstract-short[^"]*"[^>]*>(.*)</span>', li_content, re.DOTALL)
+        
         if len(label) > 0 and pdf_match and title_match:
             label = "cs.CV" if "cs.CV" in label else label[0]
             pdf_url = pdf_match.group(1)
             title = title_match.group(1)
             title = RemoveTags(title)
+            abstract = ""
+            if abstract_match:
+                abstract = abstract_match.group(1)
+                abstract = re.sub(r'<a[^>]*>.*?</a>', '', abstract)
+                abstract = RemoveTags(abstract).strip()
+                abstract = re.sub(r'Submitted\s+\d+\s+\w+,\s+\d+;\s*originally\s+announced.*$', '', abstract, flags=re.IGNORECASE)
+                abstract = re.sub(r'Submitted\s+\d+\s+\w+,\s+\d+;\s*v\d+\s+submitted\s+\d+\s+\w+,\s+\d+;\s*originally\s+announced.*$', '', abstract, flags=re.IGNORECASE)
+                abstract = abstract.strip()
 
             if "" != min_id:
                 pdf_id = pdf_url.split('/')[-1]
@@ -75,7 +88,7 @@ def GetPDFUrl(content, min_id):
                     INVALID = True
                     return items
 
-            items.append({"url": pdf_url, "label": label, "title": title})
+            items.append({"url": pdf_url, "label": label, "title": title, "abstract": abstract})
 
     return items
 
@@ -134,9 +147,11 @@ def ParseArXiv(keywords, min_id, blocked_keywords):
             if len(blocked_keywords) == 0:
                 all_urls.extend(urls)
                 continue
-            blocked_count = len([url for url in urls if any(blocked_keyword in url['title'] for blocked_keyword in blocked_keywords)])
-            print(f"Blocked {blocked_count} records containing blocked keywords.")
+            count_all = len(urls)
             urls = [url for url in urls if not any(blocked_keyword in url['title'] for blocked_keyword in blocked_keywords)]
+            if SERCH_TYPE != 'title':
+                urls = [url for url in urls if not any(blocked_keyword in url['abstract'] for blocked_keyword in blocked_keywords)]
+            print(f"Blocked {count_all - len(urls)} records containing blocked keywords.")
             all_urls.extend(urls)
         else:
             print("Response URL:", response.url)
